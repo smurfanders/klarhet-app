@@ -25,7 +25,7 @@ Klarhet is designed for one person's job search. The database will never be larg
 
 ### Requirements
 
-- Node.js 24npm --vers+
+- Node.js 22+
 - Any Linux server, VPS, or subdomain
 
 ### First-time setup
@@ -55,7 +55,7 @@ Then log in at `/login` and you're in.
 | ---------- | ----------------------------------------- |
 | Framework  | Next.js 14 (App Router)                   |
 | Language   | TypeScript                                |
-| Database   | SQLite via `better-sqlite3`               |
+| Database   | SQLite via Node.js built-in `node:sqlite` |
 | Auth       | `iron-session` (signed, encrypted cookie) |
 | Passwords  | `bcryptjs` (cost factor 12)               |
 | Validation | `zod`                                     |
