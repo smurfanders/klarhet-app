@@ -5,19 +5,11 @@ import { requireAuth } from '@/lib/session'
 export async function GET() {
   try {
     await requireAuth()
-
     const db = getDb()
 
     const applications = db.prepare(`
-      SELECT
-        a.*,
-        r.id          AS response_id,
-        r.q1_match,
-        r.q2_communication,
-        r.q3_reason,
-        r.q4_future,
-        r.q5_rating,
-        r.submitted_at
+      SELECT a.*, r.id AS response_id, r.q1_match, r.q2_communication,
+             r.q3_reason, r.q4_future, r.q5_rating, r.submitted_at
       FROM applications a
       LEFT JOIN responses r ON r.application_id = a.id
       ORDER BY a.created_at DESC
@@ -33,7 +25,7 @@ export async function GET() {
           100.0 *
           SUM(CASE WHEN r.q4_future IN ('yes','maybe') THEN 1 ELSE 0 END) /
           MAX(COUNT(r.id), 1), 0
-        )                                                     AS reconsider_pct
+        ) AS reconsider_pct
       FROM applications a
       LEFT JOIN responses r ON r.application_id = a.id
     `).get()
@@ -50,7 +42,6 @@ export async function GET() {
       data: { applications, stats, rejectionReasons },
       error: null,
     })
-
   } catch (err: unknown) {
     if (err instanceof Error && err.message === 'UNAUTHORIZED') {
       return NextResponse.json({ data: null, error: 'Unauthorized' }, { status: 401 })

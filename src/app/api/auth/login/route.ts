@@ -13,7 +13,6 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const parsed = loginSchema.safeParse(body)
-
     if (!parsed.success) {
       return NextResponse.json({ data: null, error: 'Invalid credentials' }, { status: 400 })
     }
@@ -22,15 +21,11 @@ export async function POST(request: NextRequest) {
     const user = db.prepare(`SELECT id, email, password FROM user WHERE email = ?`)
       .get(parsed.data.email) as { id: string; email: string; password: string } | undefined
 
-    // Always run compare even when user not found — prevents timing attacks
     const dummy = '$2b$10$invalid.hash.to.prevent.timing.attacks.xxxxxxxx'
     const match = await bcrypt.compare(parsed.data.password, user?.password ?? dummy)
 
     if (!user || !match) {
-      return NextResponse.json(
-        { data: null, error: 'Invalid email or password' },
-        { status: 401 }
-      )
+      return NextResponse.json({ data: null, error: 'Invalid email or password' }, { status: 401 })
     }
 
     const session = await getSession()

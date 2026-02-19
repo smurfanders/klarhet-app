@@ -1,24 +1,24 @@
-import Database from 'better-sqlite3'
+import { DatabaseSync } from 'node:sqlite'
 import path from 'path'
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Single SQLite connection — reused across requests.
-// The database file is created automatically on first run.
+// Node.js built-in SQLite (available since Node 22, no npm package needed)
+// Synchronous API — simple and straightforward for a single-user app.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const DB_PATH = path.join(process.cwd(), 'klarhet.db')
 
 declare global {
   // eslint-disable-next-line no-var
-  var __db: Database.Database | undefined
+  var __db: DatabaseSync | undefined
 }
 
-function getDb(): Database.Database {
+function getDb(): DatabaseSync {
   if (global.__db) return global.__db
 
-  const db = new Database(DB_PATH)
-  db.pragma('journal_mode = WAL')
-  db.pragma('foreign_keys = ON')
+  const db = new DatabaseSync(DB_PATH)
+  db.exec('PRAGMA journal_mode = WAL')
+  db.exec('PRAGMA foreign_keys = ON')
 
   initSchema(db)
 
@@ -26,7 +26,7 @@ function getDb(): Database.Database {
   return db
 }
 
-function initSchema(db: Database.Database) {
+function initSchema(db: DatabaseSync) {
   db.exec(`
     CREATE TABLE IF NOT EXISTS user (
       id          TEXT PRIMARY KEY DEFAULT 'owner',

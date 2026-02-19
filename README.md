@@ -51,20 +51,20 @@ Then log in at `/login` and you're in.
 
 ## Tech stack
 
-| Layer      | Technology                                |
-| ---------- | ----------------------------------------- |
-| Framework  | Next.js 14 (App Router)                   |
-| Language   | TypeScript                                |
-| Database   | SQLite via `better-sqlite3`               |
-| Auth       | `iron-session` (signed, encrypted cookie) |
-| Passwords  | `bcryptjs` (cost factor 12)               |
-| Validation | `zod`                                     |
+| Layer | Technology |
+|-------|-----------|
+| Framework | Next.js 14 (App Router) |
+| Language | TypeScript |
+| Database | SQLite via `better-sqlite3` |
+| Auth | `iron-session` (signed, encrypted cookie) |
+| Passwords | `bcryptjs` (cost factor 12) |
+| Validation | `zod` |
 
 ---
 
 ## Project structure
 
-```text
+```
 klarhet/
 ├── src/
 │   ├── app/
@@ -102,15 +102,15 @@ klarhet/
 
 ## Security
 
-| Concern           | Approach                                                        |
-| ----------------- | --------------------------------------------------------------- |
-| Auth              | Signed + encrypted session cookie via iron-session              |
-| Passwords         | bcrypt with cost factor 12 — never stored in plaintext          |
-| Input validation  | Zod schemas on every API route                                  |
-| Rate limiting     | IP-based throttle (5/hour), IPs stored as SHA-256 hashes only   |
-| HTTP headers      | X-Frame-Options, HSTS, X-Content-Type-Options on every response |
-| Double submission | Unique DB constraint + app-level check                          |
-| Secrets           | `.env.local` and `klarhet.db` are both in `.gitignore`          |
+| Concern | Approach |
+|---------|---------|
+| Auth | Signed + encrypted session cookie via iron-session |
+| Passwords | bcrypt with cost factor 12 — never stored in plaintext |
+| Input validation | Zod schemas on every API route |
+| Rate limiting | IP-based throttle (5/hour), IPs stored as SHA-256 hashes only |
+| HTTP headers | X-Frame-Options, HSTS, X-Content-Type-Options on every response |
+| Double submission | Unique DB constraint + app-level check |
+| Secrets | `.env.local` and `klarhet.db` are both in `.gitignore` |
 
 ---
 

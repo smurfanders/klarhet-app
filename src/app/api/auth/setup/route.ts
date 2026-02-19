@@ -10,23 +10,16 @@ const setupSchema = z.object({
   setupKey: z.string(),
 })
 
-// One-time setup — creates the owner account.
-// Locks itself permanently once an account exists.
 export async function POST(request: NextRequest) {
   try {
     const db = getDb()
-
     const existing = db.prepare(`SELECT id FROM user LIMIT 1`).get()
     if (existing) {
-      return NextResponse.json(
-        { data: null, error: 'Setup already completed' },
-        { status: 403 }
-      )
+      return NextResponse.json({ data: null, error: 'Setup already completed' }, { status: 403 })
     }
 
     const body = await request.json()
     const parsed = setupSchema.safeParse(body)
-
     if (!parsed.success) {
       return NextResponse.json(
         { data: null, error: 'Invalid input', details: parsed.error.flatten() },
@@ -39,10 +32,8 @@ export async function POST(request: NextRequest) {
     }
 
     const passwordHash = await bcrypt.hash(parsed.data.password, 12)
-
-    db.prepare(`
-      INSERT INTO user (id, email, password, name) VALUES ('owner', ?, ?, ?)
-    `).run(parsed.data.email, passwordHash, parsed.data.name)
+    db.prepare(`INSERT INTO user (id, email, password, name) VALUES ('owner', ?, ?, ?)`)
+      .run(parsed.data.email, passwordHash, parsed.data.name)
 
     return NextResponse.json(
       { data: { success: true, message: 'Account created. You can now log in.' }, error: null },

@@ -10,14 +10,12 @@ export async function POST(
 ) {
   try {
     const { token } = params
-
     if (!token || !/^[a-f0-9]{24}$/.test(token)) {
       return NextResponse.json({ data: null, error: 'Invalid link' }, { status: 400 })
     }
 
     const ip = getIp(request)
     const ipHash = hashIp(ip)
-
     if (!checkRateLimit(ipHash, 'form_submit')) {
       return NextResponse.json(
         { data: null, error: 'Too many submissions. Please try again later.' },
@@ -27,7 +25,6 @@ export async function POST(
 
     const body = await request.json()
     const parsed = submitResponseSchema.safeParse(body)
-
     if (!parsed.success) {
       return NextResponse.json(
         { data: null, error: 'Invalid form data', details: parsed.error.flatten() },
@@ -36,18 +33,17 @@ export async function POST(
     }
 
     const db = getDb()
-
-    const application = db.prepare(`
-      SELECT id FROM applications WHERE token = ?
-    `).get(token) as { id: string } | undefined
+    const application = db.prepare(
+      `SELECT id FROM applications WHERE token = ?`
+    ).get(token) as { id: string } | undefined
 
     if (!application) {
       return NextResponse.json({ data: null, error: 'Form not found' }, { status: 404 })
     }
 
-    const existing = db.prepare(`
-      SELECT id FROM responses WHERE application_id = ?
-    `).get(application.id)
+    const existing = db.prepare(
+      `SELECT id FROM responses WHERE application_id = ?`
+    ).get(application.id)
 
     if (existing) {
       return NextResponse.json(
@@ -57,7 +53,6 @@ export async function POST(
     }
 
     const { data } = parsed
-
     db.prepare(`
       INSERT INTO responses (
         id, application_id,
@@ -65,9 +60,7 @@ export async function POST(
         q2_communication, q2_checkboxes,
         q3_reason, q3_detail,
         q4_future, q4_detail,
-        q5_rating,
-        q6_profile, q7_interview, q7_other,
-        ip_hash
+        q5_rating, q6_profile, q7_interview, q7_other, ip_hash
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       uuidv4(), application.id,
@@ -84,7 +77,6 @@ export async function POST(
     )
 
     logRateLimit(ipHash, 'form_submit')
-
     return NextResponse.json({ data: { success: true }, error: null }, { status: 201 })
 
   } catch (err: unknown) {
