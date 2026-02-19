@@ -216,6 +216,10 @@ export default function FeedbackPage() {
   const [lang, setLang] = useState<Lang>("en");
   const [company, setCompany] = useState("");
   const [role, setRole] = useState("");
+  const [jobseekerName, setJobseekerName] = useState<string | null>(null);
+  const [jobseekerPhotoUrl, setJobseekerPhotoUrl] = useState<string | null>(
+    null,
+  );
   const [status, setStatus] = useState<
     "loading" | "ready" | "notfound" | "done" | "submitted"
   >("loading");
@@ -242,6 +246,8 @@ export default function FeedbackPage() {
         }
         setCompany(json.data.company);
         setRole(json.data.role);
+        setJobseekerName(json.data.jobseekerName ?? null);
+        setJobseekerPhotoUrl(json.data.jobseekerPhotoUrl ?? null);
         setLang((json.data.language as Lang) ?? "en");
         setStatus("ready");
       })
@@ -358,6 +364,62 @@ export default function FeedbackPage() {
             <span style={f.dot} />
             {company} · {role}
           </div>
+
+          {/* JOBSEEKER PROFILE */}
+          {jobseekerName && (
+            <div
+              style={{
+                marginTop: "24px",
+                display: "flex",
+                alignItems: "center",
+                gap: "16px",
+                padding: "16px",
+                background: "rgba(232,184,109,0.08)",
+                borderRadius: "10px",
+                border: "1px solid rgba(232,184,109,0.2)",
+              }}
+            >
+              {jobseekerPhotoUrl ? (
+                <img
+                  src={jobseekerPhotoUrl}
+                  alt={jobseekerName}
+                  style={{
+                    width: "48px",
+                    height: "48px",
+                    borderRadius: "50%",
+                    objectFit: "cover",
+                    flexShrink: 0,
+                  }}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: "48px",
+                    height: "48px",
+                    borderRadius: "50%",
+                    background: "#e8b86d",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#0d0f14",
+                    fontSize: "18px",
+                    fontWeight: 700,
+                    flexShrink: 0,
+                  }}
+                >
+                  {jobseekerName.charAt(0).toUpperCase()}
+                </div>
+              )}
+              <div>
+                <div style={{ fontSize: "13px", color: "#7a82a0" }}>
+                  Candidate
+                </div>
+                <div style={{ fontSize: "16px", fontWeight: 700 }}>
+                  {jobseekerName}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

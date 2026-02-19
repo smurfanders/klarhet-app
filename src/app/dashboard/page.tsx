@@ -112,6 +112,11 @@ export default function DashboardPage() {
   });
   const [creating, setCreating] = useState(false);
   const [formError, setFormError] = useState("");
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [profileForm, setProfileForm] = useState({ name: "", photoUrl: "" });
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileError, setProfileError] = useState("");
+  const [profileSaving, setProfileSaving] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -184,6 +189,57 @@ export default function DashboardPage() {
     });
   }
 
+  async function openProfileModal() {
+    setProfileModalOpen(true);
+    setProfileError("");
+    setProfileLoading(true);
+    try {
+      const res = await fetch("/api/profile", { credentials: "same-origin" });
+      const json = await res.json();
+      if (json.data) {
+        setProfileForm({
+          name: json.data.name ?? "",
+          photoUrl: json.data.photoUrl ?? "",
+        });
+      }
+    } catch (err) {
+      setProfileError("Failed to load profile");
+    } finally {
+      setProfileLoading(false);
+    }
+  }
+
+  async function handleProfileSave(e: React.FormEvent) {
+    e.preventDefault();
+    setProfileError("");
+    setProfileSaving(true);
+
+    try {
+      const res = await fetch("/api/profile", {
+        method: "PUT",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: profileForm.name,
+          photoUrl: profileForm.photoUrl || null,
+        }),
+      });
+
+      const json = await res.json();
+
+      if (!res.ok) {
+        setProfileError(json.error ?? "Failed to save profile");
+        return;
+      }
+
+      setProfileModalOpen(false);
+    } catch (err) {
+      setProfileError("Failed to save profile");
+    } finally {
+      setProfileSaving(false);
+    }
+  }
+
   const maxReasonCount = Math.max(...reasons.map((r) => r.count), 1);
 
   if (loading) {
@@ -221,6 +277,9 @@ export default function DashboardPage() {
           <div style={{ ...s.navItem, ...s.navActive }}>◈ Dashboard</div>
         </nav>
         <div style={s.sidebarFooter}>
+          <button onClick={openProfileModal} style={s.profileBtn}>
+            ⚙ Profile
+          </button>
           <button onClick={handleLogout} style={s.logoutBtn}>
             ← Log out
           </button>
@@ -533,6 +592,115 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+
+      {/* PROFILE MODAL */}
+      {profileModalOpen && (
+        <div
+          style={s.overlay}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setProfileModalOpen(false);
+          }}
+        >
+          <div style={s.modal}>
+            <div style={s.modalTitle}>Profile Settings</div>
+            <div style={s.modalSub}>
+              Update your name and photo so recruiters can easily identify you.
+            </div>
+
+            {profileLoading ? (
+              <div
+                style={{
+                  padding: "24px",
+                  textAlign: "center",
+                  color: "#5a6080",
+                }}
+              >
+                Loading…
+              </div>
+            ) : (
+              <form onSubmit={handleProfileSave}>
+                <label style={s.label}>Your name</label>
+                <input
+                  style={s.input}
+                  type="text"
+                  placeholder="e.g. John Doe"
+                  value={profileForm.name}
+                  onChange={(e) =>
+                    setProfileForm({ ...profileForm, name: e.target.value })
+                  }
+                  required
+                />
+
+                <label style={s.label}>Photo URL</label>
+                <input
+                  style={s.input}
+                  type="url"
+                  placeholder="https://example.com/photo.jpg"
+                  value={profileForm.photoUrl}
+                  onChange={(e) =>
+                    setProfileForm({ ...profileForm, photoUrl: e.target.value })
+                  }
+                />
+                <div
+                  style={{
+                    fontSize: "11px",
+                    color: "#5a6080",
+                    marginTop: "6px",
+                  }}
+                >
+                  Leave empty for a default avatar with your initials.
+                </div>
+
+                {profileForm.photoUrl && (
+                  <div style={{ marginTop: "12px" }}>
+                    <div
+                      style={{
+                        fontSize: "10px",
+                        color: "#5a6080",
+                        marginBottom: "8px",
+                      }}
+                    >
+                      Preview:
+                    </div>
+                    <img
+                      src={profileForm.photoUrl}
+                      alt="Profile"
+                      style={{
+                        width: "64px",
+                        height: "64px",
+                        borderRadius: "50%",
+                        objectFit: "cover",
+                        border: "1px solid #252936",
+                      }}
+                    />
+                  </div>
+                )}
+
+                {profileError && <div style={s.error}>{profileError}</div>}
+
+                <div
+                  style={{ display: "flex", gap: "10px", marginTop: "24px" }}
+                >
+                  <button
+                    type="button"
+                    style={s.btnCancel}
+                    onClick={() => setProfileModalOpen(false)}
+                  >
+                    Close
+                  </button>
+                  <button
+                    type="submit"
+                    style={s.btnGenerate}
+                    disabled={profileSaving}
+                  >
+                    {profileSaving ? "Saving…" : "Save profile →"}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -585,13 +753,27 @@ const s: Record<string, React.CSSProperties> = {
   },
   navActive: { background: "rgba(232,184,109,0.1)", color: "#e8b86d" },
   sidebarFooter: { padding: "20px 16px", borderTop: "1px solid #252936" },
+  profileBtn: {
+    width: "100%",
+    background: "none",
+    border: "1px solid #252936",
+    borderRadius: "8px",
+    padding: "10px 12px",
+    color: "#7a82a0",
+    fontSize: "13px",
+    cursor: "pointer",
+    fontFamily: "inherit",
+    marginBottom: "8px",
+    transition: "all 0.2s ease",
+  },
   logoutBtn: {
+    width: "100%",
     background: "none",
     border: "none",
     color: "#5a6080",
     fontSize: "13px",
     cursor: "pointer",
-    padding: 0,
+    padding: "10px 12px",
     fontFamily: "inherit",
   },
   main: { flex: 1, display: "flex", flexDirection: "column" },

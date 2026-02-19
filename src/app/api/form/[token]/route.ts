@@ -44,10 +44,17 @@ export async function GET(
       );
     }
 
+    const user = db
+      .prepare(`SELECT name, photo_url FROM user LIMIT 1`)
+      .get() as { name: string | null; photo_url: string | null } | undefined;
+
     return NextResponse.json({
       data: {
         company: application.company,
         role: application.role,
+        language: application.language,
+        jobseekerName: user?.name ?? null,
+        jobseekerPhotoUrl: user?.photo_url ?? null,
         language: application.language,
       },
       error: null,
