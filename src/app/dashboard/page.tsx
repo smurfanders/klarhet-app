@@ -117,6 +117,9 @@ export default function DashboardPage() {
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileError, setProfileError] = useState("");
   const [profileSaving, setProfileSaving] = useState(false);
+  const [responseModalOpen, setResponseModalOpen] = useState(false);
+  const [responseData, setResponseData] = useState<any>(null);
+  const [responseLoading, setResponseLoading] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -237,6 +240,25 @@ export default function DashboardPage() {
       setProfileError("Failed to save profile");
     } finally {
       setProfileSaving(false);
+    }
+  }
+
+  async function openResponseModal(appId: string) {
+    setResponseModalOpen(true);
+    setResponseLoading(true);
+    setResponseData(null);
+    try {
+      const res = await fetch(`/api/responses/${appId}`, {
+        credentials: "same-origin",
+      });
+      const json = await res.json();
+      if (json.data) {
+        setResponseData(json.data);
+      }
+    } catch (err) {
+      console.error("Failed to load response", err);
+    } finally {
+      setResponseLoading(false);
     }
   }
 
@@ -393,7 +415,7 @@ export default function DashboardPage() {
                       })
                     : "—"}
                 </div>
-                <div>
+                <div style={{ display: "flex", gap: "6px" }}>
                   <button
                     style={s.iconBtn}
                     title="Copy feedback link"
@@ -401,15 +423,15 @@ export default function DashboardPage() {
                   >
                     {copied === `${APP_URL}/f/${app.token}` ? "✓" : "⧉"}
                   </button>
-                </div>
-                <div>
-                  <button
-                    style={{ ...s.iconBtn, width: 72, fontSize: 12 }}
-                    title="View responses"
-                    onClick={() => router.push(`/dashboard/${app.id}`)}
-                  >
-                    View
-                  </button>
+                  {app.response_id && (
+                    <button
+                      style={{ ...s.iconBtn, width: "30px" }}
+                      title="View response"
+                      onClick={() => openResponseModal(app.id)}
+                    >
+                      👁
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -701,6 +723,287 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+
+      {/* RESPONSE MODAL */}
+      {responseModalOpen && (
+        <div
+          style={s.overlay}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setResponseModalOpen(false);
+          }}
+        >
+          <div style={{ ...s.modal, maxWidth: "600px" }}>
+            <div style={s.modalTitle}>Response Details</div>
+
+            {responseLoading ? (
+              <div
+                style={{
+                  padding: "24px",
+                  textAlign: "center",
+                  color: "#5a6080",
+                }}
+              >
+                Loading…
+              </div>
+            ) : responseData ? (
+              <div>
+                <div
+                  style={{
+                    background: "#1a1e28",
+                    borderRadius: "10px",
+                    padding: "16px",
+                    marginBottom: "16px",
+                    fontSize: "12px",
+                    color: "#7a82a0",
+                  }}
+                >
+                  <div style={{ fontWeight: 700, marginBottom: "8px" }}>
+                    {responseData.application.company} •{" "}
+                    {responseData.application.role}
+                  </div>
+                  <div>
+                    Submitted:{" "}
+                    {responseData.response?.submitted_at
+                      ? new Date(
+                          responseData.response.submitted_at,
+                        ).toLocaleString("sv-SE")
+                      : "—"}
+                  </div>
+                </div>
+
+                {responseData.response ? (
+                  <div style={{ fontSize: "13px" }}>
+                    {responseData.response.q1_match && (
+                      <div style={{ marginBottom: "14px" }}>
+                        <div
+                          style={{
+                            fontWeight: 700,
+                            marginBottom: "4px",
+                            color: "#e8b86d",
+                          }}
+                        >
+                          Experience match
+                        </div>
+                        <div style={{ color: "#7a82a0" }}>
+                          {responseData.response.q1_match}
+                        </div>
+                        {responseData.response.q1_detail && (
+                          <div
+                            style={{
+                              marginTop: "6px",
+                              padding: "8px",
+                              background: "#0d0f14",
+                              borderRadius: "6px",
+                              fontSize: "12px",
+                            }}
+                          >
+                            {responseData.response.q1_detail}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {responseData.response.q2_communication && (
+                      <div style={{ marginBottom: "14px" }}>
+                        <div
+                          style={{
+                            fontWeight: 700,
+                            marginBottom: "4px",
+                            color: "#e8b86d",
+                          }}
+                        >
+                          Communication
+                        </div>
+                        <div style={{ color: "#7a82a0" }}>
+                          {responseData.response.q2_communication}
+                        </div>
+                        {responseData.response.q2_checkboxes && (
+                          <div
+                            style={{
+                              marginTop: "6px",
+                              display: "flex",
+                              flexWrap: "wrap",
+                              gap: "6px",
+                            }}
+                          >
+                            {(
+                              responseData.response.q2_checkboxes as string[]
+                            ).map((cb) => (
+                              <span key={cb} style={s.badge}>
+                                {cb}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {responseData.response.q3_reason && (
+                      <div style={{ marginBottom: "14px" }}>
+                        <div
+                          style={{
+                            fontWeight: 700,
+                            marginBottom: "4px",
+                            color: "#e8b86d",
+                          }}
+                        >
+                          Reason not selected
+                        </div>
+                        <div style={{ color: "#7a82a0" }}>
+                          {responseData.response.q3_reason}
+                        </div>
+                        {responseData.response.q3_detail && (
+                          <div
+                            style={{
+                              marginTop: "6px",
+                              padding: "8px",
+                              background: "#0d0f14",
+                              borderRadius: "6px",
+                              fontSize: "12px",
+                            }}
+                          >
+                            {responseData.response.q3_detail}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {responseData.response.q4_future && (
+                      <div style={{ marginBottom: "14px" }}>
+                        <div
+                          style={{
+                            fontWeight: 700,
+                            marginBottom: "4px",
+                            color: "#e8b86d",
+                          }}
+                        >
+                          Consider for future roles
+                        </div>
+                        <div style={{ color: "#7a82a0" }}>
+                          {responseData.response.q4_future}
+                        </div>
+                        {responseData.response.q4_detail && (
+                          <div
+                            style={{
+                              marginTop: "6px",
+                              padding: "8px",
+                              background: "#0d0f14",
+                              borderRadius: "6px",
+                              fontSize: "12px",
+                            }}
+                          >
+                            {responseData.response.q4_detail}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {responseData.response.q5_rating && (
+                      <div style={{ marginBottom: "14px" }}>
+                        <div
+                          style={{
+                            fontWeight: 700,
+                            marginBottom: "4px",
+                            color: "#e8b86d",
+                          }}
+                        >
+                          Interview rating
+                        </div>
+                        <div style={{ color: "#e8b86d", fontSize: "14px" }}>
+                          {"★".repeat(responseData.response.q5_rating)}
+                          {"☆".repeat(5 - responseData.response.q5_rating)}
+                        </div>
+                      </div>
+                    )}
+
+                    {responseData.response.q6_profile && (
+                      <div style={{ marginBottom: "14px" }}>
+                        <div
+                          style={{
+                            fontWeight: 700,
+                            marginBottom: "4px",
+                            color: "#e8b86d",
+                          }}
+                        >
+                          What could strengthen your profile
+                        </div>
+                        <div
+                          style={{
+                            padding: "8px",
+                            background: "#0d0f14",
+                            borderRadius: "6px",
+                            fontSize: "12px",
+                            color: "#7a82a0",
+                          }}
+                        >
+                          {responseData.response.q6_profile}
+                        </div>
+                      </div>
+                    )}
+
+                    {(responseData.response.q7_interview ||
+                      responseData.response.q7_other) && (
+                      <div style={{ marginBottom: "14px" }}>
+                        <div
+                          style={{
+                            fontWeight: 700,
+                            marginBottom: "4px",
+                            color: "#e8b86d",
+                          }}
+                        >
+                          Interview feedback
+                        </div>
+                        {responseData.response.q7_interview && (
+                          <div
+                            style={{
+                              padding: "8px",
+                              background: "#0d0f14",
+                              borderRadius: "6px",
+                              fontSize: "12px",
+                              color: "#7a82a0",
+                              marginBottom: "8px",
+                            }}
+                          >
+                            {responseData.response.q7_interview}
+                          </div>
+                        )}
+                        {responseData.response.q7_other && (
+                          <div
+                            style={{
+                              padding: "8px",
+                              background: "#0d0f14",
+                              borderRadius: "6px",
+                              fontSize: "12px",
+                              color: "#7a82a0",
+                            }}
+                          >
+                            {responseData.response.q7_other}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div style={{ color: "#5a6080" }}>No response yet.</div>
+                )}
+
+                <div
+                  style={{ display: "flex", gap: "10px", marginTop: "24px" }}
+                >
+                  <button
+                    style={{ ...s.btnCancel, flex: 1 }}
+                    onClick={() => setResponseModalOpen(false)}
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div style={{ color: "#5a6080" }}>Failed to load response.</div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -845,7 +1148,7 @@ const s: Record<string, React.CSSProperties> = {
   },
   tableRow: {
     display: "grid",
-    gridTemplateColumns: "1fr 1.5fr 110px 100px 50px 70px 44px",
+    gridTemplateColumns: "1fr 1.5fr 110px 100px 50px 70px auto",
     alignItems: "center",
     padding: "0 18px",
     borderBottom: "1px solid #1a1e28",
@@ -1024,5 +1327,13 @@ const s: Record<string, React.CSSProperties> = {
     fontSize: "13px",
     fontWeight: 700,
     cursor: "pointer",
+  },
+  badge: {
+    display: "inline-block",
+    background: "#252936",
+    borderRadius: "4px",
+    padding: "4px 8px",
+    fontSize: "11px",
+    color: "#7a82a0",
   },
 };
