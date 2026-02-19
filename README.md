@@ -25,7 +25,7 @@ Klarhet is designed for one person's job search. The database will never be larg
 
 ### Requirements
 
-- Node.js 18+
+- Node.js 24npm --vers+
 - Any Linux server, VPS, or subdomain
 
 ### First-time setup
