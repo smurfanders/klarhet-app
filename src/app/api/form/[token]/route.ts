@@ -55,7 +55,6 @@ export async function GET(
         language: application.language,
         jobseekerName: user?.name ?? null,
         jobseekerPhotoUrl: user?.photo_url ?? null,
-        language: application.language,
       },
       error: null,
     });

@@ -6,23 +6,13 @@ import { useRouter } from "next/navigation";
 import { s, badge, reasonLabels } from "./styles";
 import StatCard from "./StatCard";
 import ApplicationRow from "./ApplicationRow";
+import NewLinkModal from "./components/NewLinkModal";
+import ProfileModal from "./components/ProfileModal";
+import ResponseModal from "./components/ResponseModal";
 import type { AppRow, Stats, RejectionReason } from "./types";
-
-// ── Types ──────────────────────────────────────────────────────────────────
-
-// types moved to ./types.ts
-
-// ── Helpers ────────────────────────────────────────────────────────────────
-
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "";
-
-// Helpers extracted to ./helpers.tsx
-
-// ── Main component ─────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
   const router = useRouter();
-  // (IconButton extracted to components/IconButton)
   const [applications, setApplications] = useState<AppRow[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [reasons, setReasons] = useState<RejectionReason[]>([]);
@@ -80,62 +70,53 @@ export default function DashboardPage() {
     router.push("/login");
   }, [router]);
 
-  async function handleCreate(e: React.FormEvent) {
+  const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError("");
     setCreating(true);
-    setNewLink(null);
-
+    // Don't clear newLink here; let modal show previous link until replaced
     const res = await fetch("/api/applications", {
       method: "POST",
       credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        company: form.company,
-        role: form.role,
-        language: form.language,
-        interview_date: form.interview_date || undefined,
-      }),
+      body: JSON.stringify(form),
     });
-
     const json = await res.json();
-    setCreating(false);
-
     if (!res.ok) {
-      setFormError(json.error ?? "Something went wrong");
+      setFormError(json.error ?? "Failed to create application");
+      setCreating(false);
       return;
     }
-
-    setNewLink(json.data.feedback_url);
-    setForm({ company: "", role: "", language: "en", interview_date: "" });
+    setNewLink(json.data?.link ?? null);
+    setCreating(false);
     load();
-  }
+    // Modal stays open, link is shown in modal
+  };
 
-  const copyLink = useCallback((url: string) => {
-    navigator.clipboard.writeText(url).then(() => {
-      setCopied(url);
-      setTimeout(() => setCopied(null), 2000);
-    });
+  // When opening modal, clear form and link
+  const openNewLinkModal = useCallback(() => {
+    setModalOpen(true);
+    setNewLink(null);
+    setFormError("");
+    setForm({ company: "", role: "", language: "en", interview_date: "" });
+  }, []);
+  const copyLink = useCallback((link: string) => {
+    navigator.clipboard.writeText(link);
+    setCopied(link);
+    setTimeout(() => setCopied(null), 1200);
   }, []);
 
-  const openProfileModal = useCallback(async () => {
+  const openProfileModal = useCallback(() => {
     setProfileModalOpen(true);
     setProfileError("");
     setProfileLoading(true);
-    try {
-      const res = await fetch("/api/profile", { credentials: "same-origin" });
-      const json = await res.json();
-      if (json.data) {
-        setProfileForm({
-          name: json.data.name ?? "",
-          photoUrl: json.data.photoUrl ?? "",
-        });
-      }
-    } catch (err) {
-      setProfileError("Failed to load profile");
-    } finally {
-      setProfileLoading(false);
-    }
+    fetch("/api/profile", { credentials: "same-origin" })
+      .then((res) => res.json())
+      .then((json) => {
+        if (json.data) setProfileForm(json.data);
+      })
+      .catch(() => setProfileError("Failed to load profile"))
+      .finally(() => setProfileLoading(false));
   }, []);
 
   const handleProfileSave = useCallback(
@@ -143,25 +124,18 @@ export default function DashboardPage() {
       e.preventDefault();
       setProfileError("");
       setProfileSaving(true);
-
       try {
         const res = await fetch("/api/profile", {
           method: "PUT",
           credentials: "same-origin",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name: profileForm.name,
-            photoUrl: profileForm.photoUrl || null,
-          }),
+          body: JSON.stringify(profileForm),
         });
-
         const json = await res.json();
-
         if (!res.ok) {
           setProfileError(json.error ?? "Failed to save profile");
           return;
         }
-
         setProfileModalOpen(false);
       } catch (err) {
         setProfileError("Failed to save profile");
@@ -240,14 +214,7 @@ export default function DashboardPage() {
         {/* TOPBAR */}
         <div style={s.topbar}>
           <div style={s.topbarTitle}>Dashboard</div>
-          <button
-            style={s.btnNew}
-            onClick={() => {
-              setModalOpen(true);
-              setNewLink(null);
-              setFormError("");
-            }}
-          >
+          <button style={s.btnNew} onClick={openNewLinkModal}>
             + New application link
           </button>
         </div>
@@ -353,541 +320,39 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* MODAL */}
-      {modalOpen && (
-        <div
-          style={s.overlay}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setModalOpen(false);
-          }}
-        >
-          <div style={s.modal}>
-            <div style={s.modalTitle}>New application link</div>
-            <div style={s.modalSub}>
-              Fill in the details and we&apos;ll generate a unique link to send
-              to the recruiter.
-            </div>
-
-            <form onSubmit={handleCreate}>
-              <label style={s.label}>Company</label>
-              <input
-                style={s.input}
-                type="text"
-                placeholder="e.g. Spotify"
-                value={form.company}
-                onChange={(e) => setForm({ ...form, company: e.target.value })}
-                required
-              />
-
-              <label style={s.label}>Role / position</label>
-              <input
-                style={s.input}
-                type="text"
-                placeholder="e.g. Senior Product Manager"
-                value={form.role}
-                onChange={(e) => setForm({ ...form, role: e.target.value })}
-                required
-              />
-
-              <div
-                style={{ display: "flex", flexDirection: "column", gap: 12 }}
-              >
-                <div>
-                  <label style={s.label}>Language</label>
-                  <select
-                    style={s.input}
-                    value={form.language}
-                    onChange={(e) =>
-                      setForm({ ...form, language: e.target.value })
-                    }
-                  >
-                    <option value="en">English</option>
-                    <option value="sv">Svenska</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label style={s.label}>Interview date</label>
-                  <input
-                    style={s.input}
-                    type="date"
-                    value={form.interview_date}
-                    onChange={(e) =>
-                      setForm({ ...form, interview_date: e.target.value })
-                    }
-                  />
-                </div>
-              </div>
-
-              {formError && <div style={s.error}>{formError}</div>}
-
-              {newLink && (
-                <div style={s.linkBox}>
-                  <div
-                    style={{
-                      fontSize: "11px",
-                      color: "#5ec483",
-                      letterSpacing: "1.5px",
-                      textTransform: "uppercase",
-                      marginBottom: "10px",
-                    }}
-                  >
-                    ✓ Link ready
-                  </div>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                      background: "#0d0f14",
-                      borderRadius: "6px",
-                      padding: "10px 12px",
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontFamily: "monospace",
-                        fontSize: "12px",
-                        color: "#e8b86d",
-                        flex: 1,
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {newLink}
-                    </span>
-                    <button
-                      type="button"
-                      style={s.copyBtn}
-                      onClick={() => copyLink(newLink)}
-                    >
-                      {copied === newLink ? "Copied ✓" : "Copy"}
-                    </button>
-                  </div>
-                  <div
-                    style={{
-                      fontSize: "11px",
-                      color: "#5a6080",
-                      marginTop: "8px",
-                      fontStyle: "italic",
-                    }}
-                  >
-                    Send this link directly to the recruiter.
-                  </div>
-                </div>
-              )}
-
-              <div style={{ display: "flex", gap: "10px", marginTop: "24px" }}>
-                <button
-                  type="button"
-                  style={s.btnCancel}
-                  onClick={() => setModalOpen(false)}
-                >
-                  Close
-                </button>
-                <button type="submit" style={s.btnGenerate} disabled={creating}>
-                  {creating
-                    ? "Generating…"
-                    : newLink
-                      ? "Generate another →"
-                      : "Generate link →"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* NEW LINK MODAL */}
+      <NewLinkModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        form={form}
+        setForm={setForm}
+        formError={formError}
+        creating={creating}
+        newLink={newLink}
+        copied={copied}
+        onCopy={copyLink}
+        onSubmit={handleCreate}
+      />
 
       {/* PROFILE MODAL */}
-      {profileModalOpen && (
-        <div
-          style={s.overlay}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setProfileModalOpen(false);
-          }}
-        >
-          <div style={s.modal}>
-            <div style={s.modalTitle}>Profile Settings</div>
-            <div style={s.modalSub}>
-              Update your name and photo so recruiters can easily identify you.
-            </div>
-
-            {profileLoading ? (
-              <div
-                style={{
-                  padding: "24px",
-                  textAlign: "center",
-                  color: "#5a6080",
-                }}
-              >
-                Loading…
-              </div>
-            ) : (
-              <form onSubmit={handleProfileSave}>
-                <label style={s.label}>Your name</label>
-                <input
-                  style={s.input}
-                  type="text"
-                  placeholder="e.g. John Doe"
-                  value={profileForm.name}
-                  onChange={(e) =>
-                    setProfileForm({ ...profileForm, name: e.target.value })
-                  }
-                  required
-                />
-
-                <label style={s.label}>Photo URL</label>
-                <input
-                  style={s.input}
-                  type="url"
-                  placeholder="https://example.com/photo.jpg"
-                  value={profileForm.photoUrl}
-                  onChange={(e) =>
-                    setProfileForm({ ...profileForm, photoUrl: e.target.value })
-                  }
-                />
-                <div
-                  style={{
-                    fontSize: "11px",
-                    color: "#5a6080",
-                    marginTop: "6px",
-                  }}
-                >
-                  Leave empty for a default avatar with your initials.
-                </div>
-
-                {profileForm.photoUrl && (
-                  <div style={{ marginTop: "12px" }}>
-                    <div
-                      style={{
-                        fontSize: "10px",
-                        color: "#5a6080",
-                        marginBottom: "8px",
-                      }}
-                    >
-                      Preview:
-                    </div>
-                    <img
-                      src={profileForm.photoUrl}
-                      alt="Profile"
-                      style={{
-                        width: "64px",
-                        height: "64px",
-                        borderRadius: "50%",
-                        objectFit: "cover",
-                        border: "1px solid #252936",
-                      }}
-                    />
-                  </div>
-                )}
-
-                {profileError && <div style={s.error}>{profileError}</div>}
-
-                <div
-                  style={{ display: "flex", gap: "10px", marginTop: "24px" }}
-                >
-                  <button
-                    type="button"
-                    style={s.btnCancel}
-                    onClick={() => setProfileModalOpen(false)}
-                  >
-                    Close
-                  </button>
-                  <button
-                    type="submit"
-                    style={s.btnGenerate}
-                    disabled={profileSaving}
-                  >
-                    {profileSaving ? "Saving…" : "Save profile →"}
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
-        </div>
-      )}
+      <ProfileModal
+        open={profileModalOpen}
+        onClose={() => setProfileModalOpen(false)}
+        profileForm={profileForm}
+        setProfileForm={setProfileForm}
+        profileLoading={profileLoading}
+        profileError={profileError}
+        profileSaving={profileSaving}
+        onSave={handleProfileSave}
+      />
 
       {/* RESPONSE MODAL */}
-      {responseModalOpen && (
-        <div
-          style={s.overlay}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setResponseModalOpen(false);
-          }}
-        >
-          <div style={{ ...s.modal, maxWidth: "600px" }}>
-            <div style={s.modalTitle}>Response Details</div>
-
-            {responseLoading ? (
-              <div
-                style={{
-                  padding: "24px",
-                  textAlign: "center",
-                  color: "#5a6080",
-                }}
-              >
-                Loading…
-              </div>
-            ) : responseData ? (
-              <div>
-                <div
-                  style={{
-                    background: "#1a1e28",
-                    borderRadius: "10px",
-                    padding: "16px",
-                    marginBottom: "16px",
-                    fontSize: "12px",
-                    color: "#7a82a0",
-                  }}
-                >
-                  <div style={{ fontWeight: 700, marginBottom: "8px" }}>
-                    {responseData.application.company} •{" "}
-                    {responseData.application.role}
-                  </div>
-                  <div>
-                    Submitted:{" "}
-                    {responseData.response?.submitted_at
-                      ? new Date(
-                          responseData.response.submitted_at,
-                        ).toLocaleString("sv-SE")
-                      : "—"}
-                  </div>
-                </div>
-
-                {responseData.response ? (
-                  <div style={{ fontSize: "13px" }}>
-                    {responseData.response.q1_match && (
-                      <div style={{ marginBottom: "14px" }}>
-                        <div
-                          style={{
-                            fontWeight: 700,
-                            marginBottom: "4px",
-                            color: "#e8b86d",
-                          }}
-                        >
-                          Experience match
-                        </div>
-                        <div style={{ color: "#7a82a0" }}>
-                          {responseData.response.q1_match}
-                        </div>
-                        {responseData.response.q1_detail && (
-                          <div
-                            style={{
-                              marginTop: "6px",
-                              padding: "8px",
-                              background: "#0d0f14",
-                              borderRadius: "6px",
-                              fontSize: "12px",
-                            }}
-                          >
-                            {responseData.response.q1_detail}
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {responseData.response.q2_communication && (
-                      <div style={{ marginBottom: "14px" }}>
-                        <div
-                          style={{
-                            fontWeight: 700,
-                            marginBottom: "4px",
-                            color: "#e8b86d",
-                          }}
-                        >
-                          Communication
-                        </div>
-                        <div style={{ color: "#7a82a0" }}>
-                          {responseData.response.q2_communication}
-                        </div>
-                        {responseData.response.q2_checkboxes && (
-                          <div
-                            style={{
-                              marginTop: "6px",
-                              display: "flex",
-                              flexWrap: "wrap",
-                              gap: "6px",
-                            }}
-                          >
-                            {(
-                              responseData.response.q2_checkboxes as string[]
-                            ).map((cb) => (
-                              <span key={cb} style={s.badge}>
-                                {cb}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {responseData.response.q3_reason && (
-                      <div style={{ marginBottom: "14px" }}>
-                        <div
-                          style={{
-                            fontWeight: 700,
-                            marginBottom: "4px",
-                            color: "#e8b86d",
-                          }}
-                        >
-                          Reason not selected
-                        </div>
-                        <div style={{ color: "#7a82a0" }}>
-                          {responseData.response.q3_reason}
-                        </div>
-                        {responseData.response.q3_detail && (
-                          <div
-                            style={{
-                              marginTop: "6px",
-                              padding: "8px",
-                              background: "#0d0f14",
-                              borderRadius: "6px",
-                              fontSize: "12px",
-                            }}
-                          >
-                            {responseData.response.q3_detail}
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {responseData.response.q4_future && (
-                      <div style={{ marginBottom: "14px" }}>
-                        <div
-                          style={{
-                            fontWeight: 700,
-                            marginBottom: "4px",
-                            color: "#e8b86d",
-                          }}
-                        >
-                          Consider for future roles
-                        </div>
-                        <div style={{ color: "#7a82a0" }}>
-                          {responseData.response.q4_future}
-                        </div>
-                        {responseData.response.q4_detail && (
-                          <div
-                            style={{
-                              marginTop: "6px",
-                              padding: "8px",
-                              background: "#0d0f14",
-                              borderRadius: "6px",
-                              fontSize: "12px",
-                            }}
-                          >
-                            {responseData.response.q4_detail}
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {responseData.response.q5_rating && (
-                      <div style={{ marginBottom: "14px" }}>
-                        <div
-                          style={{
-                            fontWeight: 700,
-                            marginBottom: "4px",
-                            color: "#e8b86d",
-                          }}
-                        >
-                          Interview rating
-                        </div>
-                        <div style={{ color: "#e8b86d", fontSize: "14px" }}>
-                          {"★".repeat(responseData.response.q5_rating)}
-                          {"☆".repeat(5 - responseData.response.q5_rating)}
-                        </div>
-                      </div>
-                    )}
-
-                    {responseData.response.q6_profile && (
-                      <div style={{ marginBottom: "14px" }}>
-                        <div
-                          style={{
-                            fontWeight: 700,
-                            marginBottom: "4px",
-                            color: "#e8b86d",
-                          }}
-                        >
-                          What could strengthen your profile
-                        </div>
-                        <div
-                          style={{
-                            padding: "8px",
-                            background: "#0d0f14",
-                            borderRadius: "6px",
-                            fontSize: "12px",
-                            color: "#7a82a0",
-                          }}
-                        >
-                          {responseData.response.q6_profile}
-                        </div>
-                      </div>
-                    )}
-
-                    {(responseData.response.q7_interview ||
-                      responseData.response.q7_other) && (
-                      <div style={{ marginBottom: "14px" }}>
-                        <div
-                          style={{
-                            fontWeight: 700,
-                            marginBottom: "4px",
-                            color: "#e8b86d",
-                          }}
-                        >
-                          Interview feedback
-                        </div>
-                        {responseData.response.q7_interview && (
-                          <div
-                            style={{
-                              padding: "8px",
-                              background: "#0d0f14",
-                              borderRadius: "6px",
-                              fontSize: "12px",
-                              color: "#7a82a0",
-                              marginBottom: "8px",
-                            }}
-                          >
-                            {responseData.response.q7_interview}
-                          </div>
-                        )}
-                        {responseData.response.q7_other && (
-                          <div
-                            style={{
-                              padding: "8px",
-                              background: "#0d0f14",
-                              borderRadius: "6px",
-                              fontSize: "12px",
-                              color: "#7a82a0",
-                            }}
-                          >
-                            {responseData.response.q7_other}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div style={{ color: "#5a6080" }}>No response yet.</div>
-                )}
-
-                <div
-                  style={{ display: "flex", gap: "10px", marginTop: "24px" }}
-                >
-                  <button
-                    style={{ ...s.btnCancel, flex: 1 }}
-                    onClick={() => setResponseModalOpen(false)}
-                  >
-                    Close
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div style={{ color: "#5a6080" }}>Failed to load response.</div>
-            )}
-          </div>
-        </div>
-      )}
+      <ResponseModal
+        open={responseModalOpen}
+        onClose={() => setResponseModalOpen(false)}
+        responseLoading={responseLoading}
+        responseData={responseData}
+      />
     </div>
   );
 }
