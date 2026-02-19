@@ -113,6 +113,37 @@ klarhet/
 
 ---
 
+## API contract (current)
+
+When creating a new application link, the API returns a canonical `data.link` field.
+
+### `POST /api/applications`
+
+Success response (`201`):
+
+```json
+{
+  "data": {
+    "id": "...",
+    "company": "...",
+    "role": "...",
+    "language": "en",
+    "token": "...",
+    "interview_date": "2026-02-19",
+    "created_at": "...",
+    "link": "https://your-domain/f/<token>"
+  },
+  "error": null
+}
+```
+
+Notes:
+
+- `link` is the only documented URL field for newly created application links.
+- The link uses `NEXT_PUBLIC_APP_URL` when set; otherwise the request origin is used.
+
+---
+
 ## Creating the owner account (quick)
 
 1. Start the dev server and open `/setup` in your browser.
