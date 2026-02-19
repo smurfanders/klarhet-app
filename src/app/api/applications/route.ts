@@ -41,13 +41,13 @@ export async function POST(request: NextRequest) {
     const application = db
       .prepare(`SELECT * FROM applications WHERE id = ?`)
       .get(id);
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? request.nextUrl.origin;
 
     return NextResponse.json(
       {
         data: {
           ...(application as object),
-          feedback_url: `${appUrl}/f/${token}`,
+          link: `${appUrl}/f/${token}`,
         },
         error: null,
       },

@@ -87,7 +87,20 @@ export default function DashboardPage() {
       setCreating(false);
       return;
     }
-    setNewLink(json.data?.link ?? null);
+    const apiLink = json.data?.link ?? null;
+    const baseUrl =
+      process.env.NEXT_PUBLIC_APP_URL ??
+      (typeof window !== "undefined" ? window.location.origin : "");
+    const fallbackLink = json.data?.token
+      ? `${baseUrl}/f/${json.data.token}`
+      : null;
+    const normalizedApiLink =
+      typeof apiLink === "string" &&
+      !apiLink.startsWith("undefined/") &&
+      !apiLink.startsWith("null/")
+        ? apiLink
+        : null;
+    setNewLink(normalizedApiLink ?? fallbackLink);
     setCreating(false);
     load();
     // Modal stays open, link is shown in modal

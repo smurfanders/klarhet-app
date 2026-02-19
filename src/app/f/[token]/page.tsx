@@ -821,7 +821,7 @@ const f: Record<string, React.CSSProperties> = {
     fontSize: "13px",
   },
   checkboxChecked: {
-    borderColor: "#c17d3c",
+    border: "1px solid #c17d3c",
     background: "rgba(193,125,60,0.08)",
   },
   checkboxBox: {
@@ -837,7 +837,7 @@ const f: Record<string, React.CSSProperties> = {
   },
   checkboxBoxChecked: {
     background: "#c17d3c",
-    borderColor: "#c17d3c",
+    border: "2px solid #c17d3c",
     color: "white",
   },
   stars: { display: "flex", gap: "8px", marginTop: "16px" },
