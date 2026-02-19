@@ -117,20 +117,8 @@ klarhet/
 ## Adding a language
 
 1. Add the language code to the `CHECK` constraint in `src/lib/db.ts`
-2. Add translation strings to `src/lib/i18n.ts` (to be created)
+2. Add translation strings to `src/lib/i18n.ts`
 3. Add the option to the language selector in the dashboard
-
----
-
-## Want to turn this into a SaaS later?
-
-The architecture is ready for it. Swap `better-sqlite3` for a PostgreSQL client (e.g. via Supabase), add a `user_id` foreign key to the `applications` table, and update the API routes to scope queries by user. The validation, types, and API shape stay identical.
-
----
-
-## Contributing
-
-Issues and PRs welcome. Keep it simple and self-contained.
 
 ---
 
