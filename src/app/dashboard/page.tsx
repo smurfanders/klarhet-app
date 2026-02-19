@@ -2,101 +2,27 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+// IconButton used by child components
+import { s, badge, reasonLabels } from "./styles";
+import StatCard from "./StatCard";
+import ApplicationRow from "./ApplicationRow";
+import type { AppRow, Stats, RejectionReason } from "./types";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
-interface AppRow {
-  id: string;
-  company: string;
-  role: string;
-  language: string;
-  token: string;
-  interview_date: string | null;
-  created_at: string;
-  response_id: string | null;
-  q3_reason: string | null;
-  q4_future: string | null;
-  q5_rating: number | null;
-  submitted_at: string | null;
-}
-
-interface Stats {
-  total_applications: number;
-  total_responses: number;
-  avg_rating: number | null;
-  response_rate_pct: number | null;
-  reconsider_pct: number | null;
-}
-
-interface RejectionReason {
-  reason: string;
-  count: number;
-}
+// types moved to ./types.ts
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "";
 
-function Stars({ rating }: { rating: number | null }) {
-  if (!rating)
-    return <span style={{ color: "#3a3f55", fontSize: "13px" }}>—</span>;
-  return (
-    <span style={{ color: "#e8b86d", fontSize: "13px", letterSpacing: "1px" }}>
-      {"★".repeat(rating)}
-      {"☆".repeat(5 - rating)}
-    </span>
-  );
-}
-
-function StatusBadge({ row }: { row: AppRow }) {
-  if (row.response_id) {
-    return (
-      <span
-        style={{
-          ...badge,
-          background: "rgba(94,196,131,0.1)",
-          color: "#5ec483",
-        }}
-      >
-        ● Received
-      </span>
-    );
-  }
-  return (
-    <span
-      style={{
-        ...badge,
-        background: "rgba(232,184,109,0.1)",
-        color: "#e8b86d",
-      }}
-    >
-      ◌ Pending
-    </span>
-  );
-}
-
-const badge: React.CSSProperties = {
-  display: "inline-block",
-  borderRadius: "20px",
-  padding: "3px 10px",
-  fontSize: "11px",
-  fontFamily: "monospace",
-  whiteSpace: "nowrap",
-};
-
-const reasonLabels: Record<string, string> = {
-  stronger: "Stronger candidate",
-  skill: "Missing skill",
-  culture: "Culture fit",
-  over: "Overqualified",
-  internal: "Internal hire",
-  other: "Other",
-};
+// Helpers extracted to ./helpers.tsx
 
 // ── Main component ─────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
   const router = useRouter();
+  // (IconButton extracted to components/IconButton)
   const [applications, setApplications] = useState<AppRow[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [reasons, setReasons] = useState<RejectionReason[]>([]);
@@ -146,13 +72,13 @@ export default function DashboardPage() {
     load();
   }, [load]);
 
-  async function handleLogout() {
+  const handleLogout = useCallback(async () => {
     await fetch("/api/auth/logout", {
       method: "POST",
       credentials: "same-origin",
     });
     router.push("/login");
-  }
+  }, [router]);
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -185,14 +111,14 @@ export default function DashboardPage() {
     load();
   }
 
-  function copyLink(url: string) {
+  const copyLink = useCallback((url: string) => {
     navigator.clipboard.writeText(url).then(() => {
       setCopied(url);
       setTimeout(() => setCopied(null), 2000);
     });
-  }
+  }, []);
 
-  async function openProfileModal() {
+  const openProfileModal = useCallback(async () => {
     setProfileModalOpen(true);
     setProfileError("");
     setProfileLoading(true);
@@ -210,40 +136,43 @@ export default function DashboardPage() {
     } finally {
       setProfileLoading(false);
     }
-  }
+  }, []);
 
-  async function handleProfileSave(e: React.FormEvent) {
-    e.preventDefault();
-    setProfileError("");
-    setProfileSaving(true);
+  const handleProfileSave = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      setProfileError("");
+      setProfileSaving(true);
 
-    try {
-      const res = await fetch("/api/profile", {
-        method: "PUT",
-        credentials: "same-origin",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: profileForm.name,
-          photoUrl: profileForm.photoUrl || null,
-        }),
-      });
+      try {
+        const res = await fetch("/api/profile", {
+          method: "PUT",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: profileForm.name,
+            photoUrl: profileForm.photoUrl || null,
+          }),
+        });
 
-      const json = await res.json();
+        const json = await res.json();
 
-      if (!res.ok) {
-        setProfileError(json.error ?? "Failed to save profile");
-        return;
+        if (!res.ok) {
+          setProfileError(json.error ?? "Failed to save profile");
+          return;
+        }
+
+        setProfileModalOpen(false);
+      } catch (err) {
+        setProfileError("Failed to save profile");
+      } finally {
+        setProfileSaving(false);
       }
+    },
+    [profileForm],
+  );
 
-      setProfileModalOpen(false);
-    } catch (err) {
-      setProfileError("Failed to save profile");
-    } finally {
-      setProfileSaving(false);
-    }
-  }
-
-  async function openResponseModal(appId: string) {
+  const openResponseModal = useCallback(async (appId: string) => {
     setResponseModalOpen(true);
     setResponseLoading(true);
     setResponseData(null);
@@ -252,15 +181,13 @@ export default function DashboardPage() {
         credentials: "same-origin",
       });
       const json = await res.json();
-      if (json.data) {
-        setResponseData(json.data);
-      }
+      if (json.data) setResponseData(json.data);
     } catch (err) {
       console.error("Failed to load response", err);
     } finally {
       setResponseLoading(false);
     }
-  }
+  }, []);
 
   const maxReasonCount = Math.max(...reasons.map((r) => r.count), 1);
 
@@ -328,40 +255,30 @@ export default function DashboardPage() {
         <div style={s.content}>
           {/* STATS */}
           <div style={s.statsRow}>
-            {[
-              {
-                label: "Total sent",
-                value: stats?.total_applications ?? 0,
-                color: "#e8b86d",
-                sub: "links generated",
-              },
-              {
-                label: "Responses",
-                value: stats?.total_responses ?? 0,
-                color: "#5ec483",
-                sub: `${stats?.response_rate_pct ?? 0}% response rate`,
-              },
-              {
-                label: "Avg rating",
-                value: stats?.avg_rating ? `${stats.avg_rating}/5` : "—",
-                color: "#6db3e8",
-                sub: "across all interviews",
-              },
-              {
-                label: "Reconsidered",
-                value: stats?.reconsider_pct ? `${stats.reconsider_pct}%` : "—",
-                color: "#e8b86d",
-                sub: "would consider again",
-              },
-            ].map((card) => (
-              <div key={card.label} style={s.statCard}>
-                <div style={s.statLabel}>{card.label}</div>
-                <div style={{ ...s.statValue, color: card.color }}>
-                  {card.value}
-                </div>
-                <div style={s.statSub}>{card.sub}</div>
-              </div>
-            ))}
+            <StatCard
+              label="Total sent"
+              value={stats?.total_applications ?? 0}
+              color="#e8b86d"
+              sub="links generated"
+            />
+            <StatCard
+              label="Responses"
+              value={stats?.total_responses ?? 0}
+              color="#5ec483"
+              sub={`${stats?.response_rate_pct ?? 0}% response rate`}
+            />
+            <StatCard
+              label="Avg rating"
+              value={stats?.avg_rating ? `${stats.avg_rating}/5` : "—"}
+              color="#6db3e8"
+              sub="across all interviews"
+            />
+            <StatCard
+              label="Reconsidered"
+              value={stats?.reconsider_pct ? `${stats.reconsider_pct}%` : "—"}
+              color="#e8b86d"
+              sub="would consider again"
+            />
           </div>
 
           {/* APPLICATIONS TABLE */}
@@ -397,43 +314,13 @@ export default function DashboardPage() {
             )}
 
             {applications.map((app) => (
-              <div key={app.id} style={s.tableRow}>
-                <div style={s.tdCompany}>{app.company}</div>
-                <div style={s.tdRole}>{app.role}</div>
-                <div>
-                  <StatusBadge row={app} />
-                </div>
-                <div>
-                  <Stars rating={app.q5_rating} />
-                </div>
-                <div style={s.tdLang}>{app.language.toUpperCase()}</div>
-                <div style={s.tdDate}>
-                  {app.created_at
-                    ? new Date(app.created_at).toLocaleDateString("sv-SE", {
-                        month: "short",
-                        day: "numeric",
-                      })
-                    : "—"}
-                </div>
-                <div style={{ display: "flex", gap: "6px" }}>
-                  <button
-                    style={s.iconBtn}
-                    title="Copy feedback link"
-                    onClick={() => copyLink(`${APP_URL}/f/${app.token}`)}
-                  >
-                    {copied === `${APP_URL}/f/${app.token}` ? "✓" : "⧉"}
-                  </button>
-                  {app.response_id && (
-                    <button
-                      style={{ ...s.iconBtn, width: "30px" }}
-                      title="View response"
-                      onClick={() => openResponseModal(app.id)}
-                    >
-                      👁
-                    </button>
-                  )}
-                </div>
-              </div>
+              <ApplicationRow
+                key={app.id}
+                app={app}
+                copied={copied}
+                onCopy={copyLink}
+                onView={openResponseModal}
+              />
             ))}
           </div>
 
@@ -503,11 +390,7 @@ export default function DashboardPage() {
               />
 
               <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: "12px",
-                }}
+                style={{ display: "flex", flexDirection: "column", gap: 12 }}
               >
                 <div>
                   <label style={s.label}>Language</label>
@@ -522,6 +405,7 @@ export default function DashboardPage() {
                     <option value="sv">Svenska</option>
                   </select>
                 </div>
+
                 <div>
                   <label style={s.label}>Interview date</label>
                   <input
@@ -1007,333 +891,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-// ── Styles ─────────────────────────────────────────────────────────────────
-
-const s: Record<string, React.CSSProperties> = {
-  bg: {
-    display: "flex",
-    minHeight: "100vh",
-    background: "#0d0f14",
-    fontFamily: "'DM Sans', system-ui, sans-serif",
-    color: "#e8eaf0",
-  },
-  sidebar: {
-    width: "220px",
-    flexShrink: 0,
-    background: "#13161d",
-    borderRight: "1px solid #252936",
-    display: "flex",
-    flexDirection: "column",
-    position: "sticky",
-    top: 0,
-    height: "100vh",
-  },
-  sidebarLogo: { padding: "28px 24px 20px", borderBottom: "1px solid #252936" },
-  logoMark: {
-    fontFamily: "serif",
-    fontSize: "20px",
-    fontWeight: 700,
-    color: "#e8b86d",
-    letterSpacing: "-0.5px",
-  },
-  logoSub: {
-    fontSize: "10px",
-    letterSpacing: "2px",
-    textTransform: "uppercase",
-    color: "#3a3f55",
-    marginTop: "2px",
-    fontFamily: "monospace",
-  },
-  nav: { flex: 1, padding: "16px 12px" },
-  navItem: {
-    padding: "10px 12px",
-    borderRadius: "8px",
-    fontSize: "13px",
-    fontWeight: 600,
-    color: "#5a6080",
-    cursor: "pointer",
-  },
-  navActive: { background: "rgba(232,184,109,0.1)", color: "#e8b86d" },
-  sidebarFooter: { padding: "20px 16px", borderTop: "1px solid #252936" },
-  profileBtn: {
-    width: "100%",
-    background: "none",
-    border: "1px solid #252936",
-    borderRadius: "8px",
-    padding: "10px 12px",
-    color: "#7a82a0",
-    fontSize: "13px",
-    cursor: "pointer",
-    fontFamily: "inherit",
-    marginBottom: "8px",
-    transition: "all 0.2s ease",
-  },
-  logoutBtn: {
-    width: "100%",
-    background: "none",
-    border: "none",
-    color: "#5a6080",
-    fontSize: "13px",
-    cursor: "pointer",
-    padding: "10px 12px",
-    fontFamily: "inherit",
-  },
-  main: { flex: 1, display: "flex", flexDirection: "column" },
-  topbar: {
-    height: "64px",
-    borderBottom: "1px solid #252936",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: "0 28px",
-    background: "#13161d",
-    position: "sticky",
-    top: 0,
-    zIndex: 10,
-  },
-  topbarTitle: { fontSize: "15px", fontWeight: 700 },
-  btnNew: {
-    background: "#e8b86d",
-    color: "#0d0f14",
-    border: "none",
-    borderRadius: "8px",
-    padding: "9px 16px",
-    fontSize: "13px",
-    fontWeight: 700,
-    cursor: "pointer",
-  },
-  content: { padding: "28px" },
-  statsRow: {
-    display: "grid",
-    gridTemplateColumns: "repeat(4, 1fr)",
-    gap: "14px",
-    marginBottom: "28px",
-  },
-  statCard: {
-    background: "#13161d",
-    border: "1px solid #252936",
-    borderRadius: "12px",
-    padding: "20px 22px",
-  },
-  statLabel: {
-    fontSize: "10px",
-    letterSpacing: "2px",
-    textTransform: "uppercase",
-    color: "#5a6080",
-    fontFamily: "monospace",
-    marginBottom: "8px",
-  },
-  statValue: {
-    fontSize: "30px",
-    fontWeight: 800,
-    lineHeight: 1,
-    marginBottom: "4px",
-  },
-  statSub: { fontSize: "11px", color: "#3a3f55", fontFamily: "monospace" },
-  sectionHeader: { marginBottom: "12px" },
-  sectionTitle: {
-    fontSize: "11px",
-    letterSpacing: "2px",
-    textTransform: "uppercase",
-    color: "#5a6080",
-    fontWeight: 700,
-  },
-  tableWrap: {
-    background: "#13161d",
-    border: "1px solid #252936",
-    borderRadius: "12px",
-    overflow: "hidden",
-    marginBottom: "24px",
-  },
-  tableRow: {
-    display: "grid",
-    gridTemplateColumns: "1fr 1.5fr 110px 100px 50px 70px auto",
-    alignItems: "center",
-    padding: "0 18px",
-    borderBottom: "1px solid #1a1e28",
-  },
-  tableHeader: {
-    background: "#1a1e28",
-    paddingTop: "12px",
-    paddingBottom: "12px",
-  },
-  th: {
-    fontSize: "10px",
-    letterSpacing: "2px",
-    textTransform: "uppercase",
-    color: "#3a3f55",
-    fontFamily: "monospace",
-  },
-  tdCompany: { fontSize: "14px", fontWeight: 700, padding: "16px 0" },
-  tdRole: {
-    fontSize: "13px",
-    color: "#7a82a0",
-    fontStyle: "italic",
-    padding: "16px 0",
-  },
-  tdLang: { fontSize: "11px", color: "#5a6080", fontFamily: "monospace" },
-  tdDate: { fontSize: "11px", color: "#5a6080", fontFamily: "monospace" },
-  iconBtn: {
-    background: "none",
-    border: "1px solid #252936",
-    borderRadius: "6px",
-    width: "30px",
-    height: "30px",
-    cursor: "pointer",
-    color: "#7a82a0",
-    fontSize: "14px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  emptyRow: { padding: "48px", textAlign: "center" },
-  insightCard: {
-    background: "#13161d",
-    border: "1px solid #252936",
-    borderRadius: "12px",
-    padding: "22px",
-    marginBottom: "24px",
-  },
-  barRow: {
-    display: "grid",
-    gridTemplateColumns: "160px 1fr 28px",
-    alignItems: "center",
-    gap: "12px",
-    marginBottom: "10px",
-  },
-  barLabel: {
-    fontSize: "12px",
-    color: "#7a82a0",
-    fontFamily: "monospace",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-  },
-  barTrack: {
-    height: "6px",
-    background: "#1a1e28",
-    borderRadius: "6px",
-    overflow: "hidden",
-  },
-  barFill: {
-    height: "100%",
-    background: "#e8b86d",
-    borderRadius: "6px",
-    transition: "width 0.8s ease",
-  },
-  barCount: {
-    fontSize: "11px",
-    color: "#5a6080",
-    fontFamily: "monospace",
-    textAlign: "right",
-  },
-  overlay: {
-    position: "fixed",
-    inset: 0,
-    background: "rgba(0,0,0,0.7)",
-    backdropFilter: "blur(4px)",
-    zIndex: 100,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "24px",
-  },
-  modal: {
-    background: "#13161d",
-    border: "1px solid #2f3447",
-    borderRadius: "16px",
-    padding: "36px",
-    width: "100%",
-    maxWidth: "460px",
-  },
-  modalTitle: { fontSize: "20px", fontWeight: 800, marginBottom: "6px" },
-  modalSub: {
-    fontSize: "13px",
-    color: "#7a82a0",
-    marginBottom: "24px",
-    fontStyle: "italic",
-    lineHeight: 1.5,
-  },
-  label: {
-    display: "block",
-    fontSize: "10px",
-    color: "#5a6080",
-    letterSpacing: "2px",
-    textTransform: "uppercase",
-    marginTop: "14px",
-    marginBottom: "6px",
-    fontFamily: "monospace",
-  },
-  input: {
-    width: "100%",
-    background: "#1a1e28",
-    border: "1px solid #252936",
-    borderRadius: "8px",
-    padding: "11px 13px",
-    fontSize: "14px",
-    color: "#e8eaf0",
-    outline: "none",
-    boxSizing: "border-box",
-    fontFamily: "inherit",
-  },
-  error: {
-    background: "rgba(232,112,112,0.1)",
-    border: "1px solid rgba(232,112,112,0.3)",
-    borderRadius: "8px",
-    padding: "10px 14px",
-    fontSize: "13px",
-    color: "#e87070",
-    marginTop: "12px",
-  },
-  linkBox: {
-    background: "#1a1e28",
-    border: "1px solid rgba(94,196,131,0.3)",
-    borderRadius: "10px",
-    padding: "16px",
-    marginTop: "16px",
-  },
-  copyBtn: {
-    background: "none",
-    border: "1px solid #252936",
-    borderRadius: "5px",
-    padding: "5px 12px",
-    color: "#7a82a0",
-    fontFamily: "monospace",
-    fontSize: "11px",
-    cursor: "pointer",
-    whiteSpace: "nowrap",
-  },
-  btnCancel: {
-    flex: 1,
-    background: "none",
-    border: "1px solid #252936",
-    borderRadius: "8px",
-    padding: "12px",
-    color: "#7a82a0",
-    fontFamily: "inherit",
-    fontSize: "13px",
-    fontWeight: 600,
-    cursor: "pointer",
-  },
-  btnGenerate: {
-    flex: 2,
-    background: "#e8b86d",
-    border: "none",
-    borderRadius: "8px",
-    padding: "12px",
-    color: "#0d0f14",
-    fontFamily: "inherit",
-    fontSize: "13px",
-    fontWeight: 700,
-    cursor: "pointer",
-  },
-  badge: {
-    display: "inline-block",
-    background: "#252936",
-    borderRadius: "4px",
-    padding: "4px 8px",
-    fontSize: "11px",
-    color: "#7a82a0",
-  },
-};

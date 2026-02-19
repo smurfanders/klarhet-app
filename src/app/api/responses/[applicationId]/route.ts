@@ -8,7 +8,7 @@ export async function GET(
 ) {
   try {
     await requireAuth();
-    const { applicationId } = await params;
+    const { applicationId } = params;
     const uuidRegex =
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(applicationId)) {

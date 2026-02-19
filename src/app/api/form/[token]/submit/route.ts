@@ -9,7 +9,7 @@ export async function POST(
   { params }: { params: { token: string } },
 ) {
   try {
-    const { token } = await params;
+    const { token } = params;
     if (!token || !/^[a-f0-9]{24}$/.test(token)) {
       return NextResponse.json(
         { data: null, error: "Invalid link" },
