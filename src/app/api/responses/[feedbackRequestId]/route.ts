@@ -4,14 +4,14 @@ import { requireAuth } from "@/lib/session";
 
 export async function GET(
   _request: NextRequest,
-  { params }: { params: { applicationId: string } },
+  { params }: { params: { feedbackRequestId: string } },
 ) {
   try {
     await requireAuth();
-    const { applicationId } = params;
+    const { feedbackRequestId } = params;
     const uuidRegex =
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(applicationId)) {
+    if (!uuidRegex.test(feedbackRequestId)) {
       return NextResponse.json(
         { data: null, error: "Invalid ID" },
         { status: 400 },
@@ -19,14 +19,14 @@ export async function GET(
     }
 
     const db = getDb();
-    const application = db
+    const feedbackRequest = db
       .prepare(
         `SELECT id, company, role, language, interview_date, created_at
-       FROM applications WHERE id = ?`,
+       FROM feedback_requests WHERE id = ?`,
       )
-      .get(applicationId);
+      .get(feedbackRequestId);
 
-    if (!application) {
+    if (!feedbackRequest) {
       return NextResponse.json(
         { data: null, error: "Not found" },
         { status: 404 },
@@ -36,13 +36,13 @@ export async function GET(
     const response = db
       .prepare(
         `
-      SELECT id, application_id, q1_match, q1_detail, q2_communication, q2_checkboxes,
+      SELECT id, feedback_request_id, q1_match, q1_detail, q2_communication, q2_checkboxes,
              q3_reason, q3_detail, q4_future, q4_detail, q5_rating,
              q6_profile, q7_interview, q7_other, submitted_at
-      FROM responses WHERE application_id = ?
+      FROM responses WHERE feedback_request_id = ?
     `,
       )
-      .get(applicationId) as Record<string, unknown> | undefined;
+      .get(feedbackRequestId) as Record<string, unknown> | undefined;
 
     if (response?.q2_checkboxes) {
       try {
@@ -53,7 +53,7 @@ export async function GET(
     }
 
     return NextResponse.json({
-      data: { application, response: response ?? null },
+      data: { feedbackRequest, response: response ?? null },
       error: null,
     });
   } catch (err: unknown) {

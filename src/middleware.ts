@@ -8,7 +8,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 const PROTECTED = [
   "/dashboard",
-  "/api/applications",
+  "/api/feedback-requests",
   "/api/dashboard",
   "/api/responses",
 ];

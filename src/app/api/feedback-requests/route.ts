@@ -2,17 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 import getDb from "@/lib/db";
 import { requireAuth } from "@/lib/session";
-import { createApplicationSchema } from "@/lib/validation";
+import { createFeedbackRequestSchema } from "@/lib/validation";
 
 export async function POST(request: NextRequest) {
   try {
     console.debug(
-      "[api/applications] incoming cookie header:",
+      "[api/feedback-requests] incoming cookie header:",
       request.headers.get("cookie"),
     );
     await requireAuth();
     const body = await request.json();
-    const parsed = createApplicationSchema.safeParse(body);
+    const parsed = createFeedbackRequestSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
         { data: null, error: "Invalid input", details: parsed.error.flatten() },
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
 
     db.prepare(
       `
-      INSERT INTO applications (id, company, role, language, token, interview_date)
+      INSERT INTO feedback_requests (id, company, role, language, token, interview_date)
       VALUES (?, ?, ?, ?, ?, ?)
     `,
     ).run(
@@ -38,15 +38,15 @@ export async function POST(request: NextRequest) {
       parsed.data.interview_date ?? null,
     );
 
-    const application = db
-      .prepare(`SELECT * FROM applications WHERE id = ?`)
+    const feedbackRequest = db
+      .prepare(`SELECT * FROM feedback_requests WHERE id = ?`)
       .get(id);
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? request.nextUrl.origin;
 
     return NextResponse.json(
       {
         data: {
-          ...(application as object),
+          ...(feedbackRequest as object),
           link: `${appUrl}/f/${token}`,
         },
         error: null,
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
         { status: 401 },
       );
     }
-    console.error("[api/applications POST]", err);
+    console.error("[api/feedback-requests POST]", err);
     return NextResponse.json(
       { data: null, error: "Internal server error" },
       { status: 500 },
@@ -70,23 +70,20 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
   try {
-    // Note: GET requests may be called from client with credentials
-    // ensure the cookie header is present on the request.
-    // (No request object available here — callers should check server logs.)
     await requireAuth();
     const db = getDb();
-    const applications = db
+    const feedbackRequests = db
       .prepare(
         `
-      SELECT a.*, r.id AS response_id, r.q1_match, r.q2_communication,
+      SELECT fr.*, r.id AS response_id, r.q1_match, r.q2_communication,
              r.q3_reason, r.q4_future, r.q5_rating, r.submitted_at
-      FROM applications a
-      LEFT JOIN responses r ON r.application_id = a.id
-      ORDER BY a.created_at DESC
+      FROM feedback_requests fr
+      LEFT JOIN responses r ON r.feedback_request_id = fr.id
+      ORDER BY fr.created_at DESC
     `,
       )
       .all();
-    return NextResponse.json({ data: applications, error: null });
+    return NextResponse.json({ data: feedbackRequests, error: null });
   } catch (err: unknown) {
     if (err instanceof Error && err.message === "UNAUTHORIZED") {
       return NextResponse.json(
@@ -94,7 +91,7 @@ export async function GET() {
         { status: 401 },
       );
     }
-    console.error("[api/applications GET]", err);
+    console.error("[api/feedback-requests GET]", err);
     return NextResponse.json(
       { data: null, error: "Internal server error" },
       { status: 500 },

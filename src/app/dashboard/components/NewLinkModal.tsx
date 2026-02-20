@@ -36,10 +36,10 @@ export default function NewLinkModal({
   return (
     <div style={s.overlay}>
       <div style={s.modal}>
-        <div style={s.modalTitle}>New application link</div>
+        <div style={s.modalTitle}>New feedback request</div>
         <div style={s.modalSub}>
-          Generate a unique feedback link for each application. Send it to the
-          recruiter after your interview.
+          Generate a unique feedback link for each feedback request. Send it to
+          the recruiter after your interview.
         </div>
         <form onSubmit={onSubmit}>
           <label style={s.label}>Company</label>

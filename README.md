@@ -76,10 +76,10 @@ klarhet/
 │   ├── app/
 │   │   ├── api/
 │   │   │   ├── auth/            ← login, logout, one-time setup
-│   │   │   ├── applications/    ← create + list feedback links
-│   │   │   ├── dashboard/       ← stats + application list
+│   │   │   ├── feedback-requests/ ← create + list feedback links
+│   │   │   ├── dashboard/       ← stats + feedback request list
 │   │   │   ├── form/[token]/    ← public form metadata + submit
-│   │   │   └── responses/       ← fetch response for an application (owner-only)
+│   │   │   └── responses/       ← fetch response for a feedback request (owner-only)
 │   │   ├── dashboard/page.tsx
 │   │   ├── f/[token]/page.tsx   ← recruiter-facing form
 │   │   ├── login/page.tsx
@@ -115,9 +115,9 @@ klarhet/
 
 ## API contract (current)
 
-When creating a new application link, the API returns a canonical `data.link` field.
+When creating a new feedback request link, the API returns a canonical `data.link` field.
 
-### `POST /api/applications`
+### `POST /api/feedback-requests`
 
 Success response (`201`):
 
@@ -139,7 +139,7 @@ Success response (`201`):
 
 Notes:
 
-- `link` is the only documented URL field for newly created application links.
+- `link` is the only documented URL field for newly created feedback request links.
 - The link uses `NEXT_PUBLIC_APP_URL` when set; otherwise the request origin is used.
 
 ---

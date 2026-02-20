@@ -40,11 +40,11 @@ export async function POST(
     }
 
     const db = getDb();
-    const application = db
-      .prepare(`SELECT id FROM applications WHERE token = ?`)
+    const feedbackRequest = db
+      .prepare(`SELECT id FROM feedback_requests WHERE token = ?`)
       .get(token) as { id: string } | undefined;
 
-    if (!application) {
+    if (!feedbackRequest) {
       return NextResponse.json(
         { data: null, error: "Form not found" },
         { status: 404 },
@@ -52,8 +52,8 @@ export async function POST(
     }
 
     const existing = db
-      .prepare(`SELECT id FROM responses WHERE application_id = ?`)
-      .get(application.id);
+      .prepare(`SELECT id FROM responses WHERE feedback_request_id = ?`)
+      .get(feedbackRequest.id);
 
     if (existing) {
       return NextResponse.json(
@@ -69,7 +69,7 @@ export async function POST(
     db.prepare(
       `
       INSERT INTO responses (
-        id, application_id,
+        id, feedback_request_id,
         q1_match, q1_detail,
         q2_communication, q2_checkboxes,
         q3_reason, q3_detail,
@@ -79,7 +79,7 @@ export async function POST(
     `,
     ).run(
       uuidv4(),
-      application.id,
+      feedbackRequest.id,
       data.q1_match,
       data.q1_detail ?? null,
       data.q2_communication,

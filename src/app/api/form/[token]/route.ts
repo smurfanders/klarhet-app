@@ -15,15 +15,15 @@ export async function GET(
     }
 
     const db = getDb();
-    const application = db
+    const feedbackRequest = db
       .prepare(
-        `SELECT id, company, role, language FROM applications WHERE token = ?`,
+        `SELECT id, company, role, language FROM feedback_requests WHERE token = ?`,
       )
       .get(token) as
       | { id: string; company: string; role: string; language: string }
       | undefined;
 
-    if (!application) {
+    if (!feedbackRequest) {
       return NextResponse.json(
         { data: null, error: "Form not found" },
         { status: 404 },
@@ -31,8 +31,8 @@ export async function GET(
     }
 
     const existing = db
-      .prepare(`SELECT id FROM responses WHERE application_id = ?`)
-      .get(application.id);
+      .prepare(`SELECT id FROM responses WHERE feedback_request_id = ?`)
+      .get(feedbackRequest.id);
 
     if (existing) {
       return NextResponse.json(
@@ -50,9 +50,9 @@ export async function GET(
 
     return NextResponse.json({
       data: {
-        company: application.company,
-        role: application.role,
-        language: application.language,
+        company: feedbackRequest.company,
+        role: feedbackRequest.role,
+        language: feedbackRequest.language,
         jobseekerName: user?.name ?? null,
         jobseekerPhotoUrl: user?.photo_url ?? null,
       },

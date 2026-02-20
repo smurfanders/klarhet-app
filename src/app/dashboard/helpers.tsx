@@ -14,7 +14,7 @@ export function Stars({ rating }: { rating: number | null }) {
   );
 }
 
-export function StatusBadge({ row }: { row: { response_id?: string } }) {
+export function StatusBadge({ row }: { row: { response_id?: string | null } }) {
   if (row.response_id) {
     return (
       <span

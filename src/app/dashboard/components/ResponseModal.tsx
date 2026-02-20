@@ -15,6 +15,7 @@ export default function ResponseModal({
   responseLoading,
   responseData,
 }: ResponseModalProps) {
+  const target = responseData?.feedbackRequest;
   if (!open) return null;
   return (
     <div style={s.overlay}>
@@ -39,8 +40,7 @@ export default function ResponseModal({
               }}
             >
               <div style={{ fontWeight: 700, marginBottom: "8px" }}>
-                {responseData.application.company} •{" "}
-                {responseData.application.role}
+                {target?.company} • {target?.role}
               </div>
               <div>
                 Submitted:{" "}

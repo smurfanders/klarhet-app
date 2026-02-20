@@ -1,4 +1,4 @@
-export interface AppRow {
+export interface FeedbackRequestRow {
   id: string;
   company: string;
   role: string;
@@ -14,7 +14,7 @@ export interface AppRow {
 }
 
 export interface Stats {
-  total_applications: number;
+  total_feedback_requests: number;
   total_responses: number;
   avg_rating: number | null;
   response_rate_pct: number | null;

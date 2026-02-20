@@ -5,15 +5,17 @@ import { useRouter } from "next/navigation";
 // IconButton used by child components
 import { s, badge, reasonLabels } from "./styles";
 import StatCard from "./StatCard";
-import ApplicationRow from "./ApplicationRow";
+import FeedbackRequestRowItem from "./components/FeedbackRequestRow";
 import NewLinkModal from "./components/NewLinkModal";
 import ProfileModal from "./components/ProfileModal";
 import ResponseModal from "./components/ResponseModal";
-import type { AppRow, Stats, RejectionReason } from "./types";
+import type { FeedbackRequestRow, Stats, RejectionReason } from "./types";
 
 export default function DashboardPage() {
   const router = useRouter();
-  const [applications, setApplications] = useState<AppRow[]>([]);
+  const [feedbackRequests, setFeedbackRequests] = useState<
+    FeedbackRequestRow[]
+  >([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [reasons, setReasons] = useState<RejectionReason[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,7 +49,7 @@ export default function DashboardPage() {
       }
       const json = await res.json();
       if (json.data) {
-        setApplications(json.data.applications);
+        setFeedbackRequests(json.data.feedbackRequests);
         setStats(json.data.stats);
         setReasons(json.data.rejectionReasons);
       }
@@ -75,7 +77,7 @@ export default function DashboardPage() {
     setFormError("");
     setCreating(true);
     // Don't clear newLink here; let modal show previous link until replaced
-    const res = await fetch("/api/applications", {
+    const res = await fetch("/api/feedback-requests", {
       method: "POST",
       credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
@@ -83,7 +85,7 @@ export default function DashboardPage() {
     });
     const json = await res.json();
     if (!res.ok) {
-      setFormError(json.error ?? "Failed to create application");
+      setFormError(json.error ?? "Failed to create feedback request");
       setCreating(false);
       return;
     }
@@ -159,12 +161,12 @@ export default function DashboardPage() {
     [profileForm],
   );
 
-  const openResponseModal = useCallback(async (appId: string) => {
+  const openResponseModal = useCallback(async (feedbackRequestId: string) => {
     setResponseModalOpen(true);
     setResponseLoading(true);
     setResponseData(null);
     try {
-      const res = await fetch(`/api/responses/${appId}`, {
+      const res = await fetch(`/api/responses/${feedbackRequestId}`, {
         credentials: "same-origin",
       });
       const json = await res.json();
@@ -228,7 +230,7 @@ export default function DashboardPage() {
         <div style={s.topbar}>
           <div style={s.topbarTitle}>Dashboard</div>
           <button style={s.btnNew} onClick={openNewLinkModal}>
-            + New application link
+            + New feedback request
           </button>
         </div>
 
@@ -237,7 +239,7 @@ export default function DashboardPage() {
           <div style={s.statsRow}>
             <StatCard
               label="Total sent"
-              value={stats?.total_applications ?? 0}
+              value={stats?.total_feedback_requests ?? 0}
               color="#e8b86d"
               sub="links generated"
             />
@@ -261,9 +263,9 @@ export default function DashboardPage() {
             />
           </div>
 
-          {/* APPLICATIONS TABLE */}
+          {/* FEEDBACK REQUESTS TABLE */}
           <div style={s.sectionHeader}>
-            <div style={s.sectionTitle}>Applications</div>
+            <div style={s.sectionTitle}>Feedback Requests</div>
           </div>
 
           <div style={s.tableWrap}>
@@ -278,7 +280,7 @@ export default function DashboardPage() {
               <div style={s.th}></div>
             </div>
 
-            {applications.length === 0 && (
+            {feedbackRequests.length === 0 && (
               <div style={s.emptyRow}>
                 <div style={{ fontSize: "28px", marginBottom: "10px" }}>◎</div>
                 <div
@@ -288,15 +290,15 @@ export default function DashboardPage() {
                     fontStyle: "italic",
                   }}
                 >
-                  No applications yet — create your first link above.
+                  No feedback requests yet — create your first link above.
                 </div>
               </div>
             )}
 
-            {applications.map((app) => (
-              <ApplicationRow
-                key={app.id}
-                app={app}
+            {feedbackRequests.map((feedbackRequest) => (
+              <FeedbackRequestRowItem
+                key={feedbackRequest.id}
+                feedbackRequest={feedbackRequest}
                 copied={copied}
                 onCopy={copyLink}
                 onView={openResponseModal}

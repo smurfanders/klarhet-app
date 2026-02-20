@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 
 interface ResponsePayload {
-  application: {
+  feedbackRequest: {
     id: string;
     company: string;
     role: string;
@@ -15,7 +15,7 @@ interface ResponsePayload {
   response: Record<string, any> | null;
 }
 
-export default function ApplicationDetail() {
+export default function FeedbackRequestDetail() {
   const router = useRouter();
   const params = useParams();
   const id = (params as any)?.id as string;
@@ -41,12 +41,13 @@ export default function ApplicationDetail() {
       .finally(() => setLoading(false));
   }, [id]);
 
-  if (!id) return <div style={{ padding: 28 }}>Invalid application id</div>;
+  if (!id)
+    return <div style={{ padding: 28 }}>Invalid feedback request id</div>;
   if (loading) return <div style={{ padding: 28 }}>Loading…</div>;
   if (error) return <div style={{ padding: 28 }}>Error: {error}</div>;
   if (!data) return <div style={{ padding: 28 }}>No data</div>;
 
-  const app = data.application;
+  const app = data.feedbackRequest;
   const resp = data.response;
 
   return (
@@ -73,7 +74,7 @@ export default function ApplicationDetail() {
 
       <div style={s.main}>
         <div style={s.topbar}>
-          <div style={s.topbarTitle}>Application</div>
+          <div style={s.topbarTitle}>Feedback Request</div>
         </div>
 
         <div style={s.content}>
